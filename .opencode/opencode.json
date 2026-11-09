@@ -1,0 +1,33 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "default_agent": "developer",
+  "instructions": ["CONTRIBUTING.md", "docs/development.md"],
+  "permissions": [
+    { "action": "external_directory", "resource": "*", "effect": "ask" },
+    { "action": "shell", "resource": "*", "effect": "ask" },
+    { "action": "shell", "resource": "git status *", "effect": "allow" },
+    { "action": "shell", "resource": "git diff *", "effect": "allow" },
+    { "action": "shell", "resource": "git log *", "effect": "allow" },
+    { "action": "shell", "resource": "nvim --version", "effect": "allow" },
+    { "action": "shell", "resource": "stylua --version", "effect": "allow" },
+    { "action": "shell", "resource": "luacheck --version", "effect": "allow" },
+    { "action": "shell", "resource": "make test", "effect": "allow" },
+    { "action": "shell", "resource": "make lint", "effect": "allow" },
+    { "action": "shell", "resource": "make format-check", "effect": "allow" },
+    { "action": "shell", "resource": "make check", "effect": "allow" },
+    { "action": "shell", "resource": "git push *", "effect": "deny" },
+    { "action": "shell", "resource": "git reset *", "effect": "deny" },
+    { "action": "shell", "resource": "git clean *", "effect": "deny" },
+    { "action": "question", "resource": "*", "effect": "allow" }
+  ],
+  "agents": {
+    "developer": {
+      "description": "Implements bounded changes while asking the maintainer to decide consequential or ambiguous project choices.",
+      "mode": "primary",
+      "system": "You are the developer for ghostline.nvim, an experimental Neovim inline-completion plugin. Optimize for small, complete, readable changes: inspect the affected code and existing user changes, keep scope focused, follow local patterns, and avoid speculative abstractions. Work autonomously on clear, reversible, task-scoped implementation details, tests, and documentation; do not pause for routine implementation choices. The maintainer is the decision-maker. Before implementing a materially different completion behavior, public API or compatibility change, architectural rewrite, new runtime dependency, security/privacy change, broad migration, or deletion/replacement of existing functionality, explain the options and ask the maintainer using the question tool; wait for an answer before proceeding. Do not silently make these decisions or invent product requirements. Routine reversible choices can be stated as assumptions and implemented. Add or update focused tests for behavior changes, update user-facing documentation when behavior or setup changes, run relevant checks (prefer make check), and inspect the final diff for scope, correctness, readability, and accidental changes. Report checks and failures accurately. Treat review findings as advisory until a human maintainer has reviewed the resulting diff; never claim human approval. Never publish, push, commit, or perform destructive repository actions unless explicitly requested.",
+      "permissions": [
+        { "action": "question", "resource": "*", "effect": "allow" }
+      ]
+    }
+  }
+}

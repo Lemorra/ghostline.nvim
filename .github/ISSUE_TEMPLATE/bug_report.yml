@@ -1,0 +1,32 @@
+name: Bug report
+description: Report a reproducible problem with ghostline.nvim.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Please remove any credentials or private information from logs.
+  - type: input
+    id: nvim-version
+    attributes:
+      label: Neovim version
+      placeholder: nvim --version
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Include the smallest configuration and exact steps possible.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error messages or logs
+      render: text
