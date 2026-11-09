@@ -20,12 +20,59 @@ Requirements on the host:
 - Git
 
 In VS Code, open this repository and choose **Reopen in Container** from the
-Command Palette. The first open builds the image and installs StyLua; later
-opens reuse the container. The workspace checkout is mounted for editing, but
-the container has its own home directory and XDG configuration, data, state,
-and cache directories. In particular, the host's `~/.config/nvim`, Neovim data
-directory, and plugin manager directories are not mounted. Tests run with
-Neovim's `--clean` option as an additional guard against loading a user config.
+Command Palette. The first open builds the image with Neovim, Lua tools, StyLua,
+and OpenCode; later opens reuse the container. The workspace checkout is
+mounted for editing, but the container has its own home directory and XDG
+configuration, data, state, and cache directories. In particular, the host's
+`~/.config/nvim`, Neovim data directory, and plugin manager directories are not
+mounted. Tests run with Neovim's `--clean` option as an additional guard against
+loading a user config.
+
+### Build and run with Docker CLI
+
+You can use the same container without VS Code or the Dev Containers extension.
+Run these commands from the repository root. Docker builds the development
+image; a named volume keeps container-only OpenCode sessions and provider
+authentication between runs, without mounting your host home directory:
+
+```sh
+docker build \
+  --build-arg USER_UID="$(id -u)" \
+  --build-arg USER_GID="$(id -g)" \
+  --tag ghostline-dev \
+  --file .devcontainer/Dockerfile \
+  .
+
+docker volume create ghostline-dev-opencode
+
+docker run --rm -it \
+  --name ghostline-dev \
+  --publish 127.0.0.1:4096:4096 \
+  --volume "$PWD:/workspaces/ghostline.nvim" \
+  --volume ghostline-dev-opencode:/home/vscode/.local/share/opencode \
+  --workdir /workspaces/ghostline.nvim \
+  --env HOME=/home/vscode \
+  --env XDG_CONFIG_HOME=/home/vscode/.config \
+  --env XDG_DATA_HOME=/home/vscode/.local/share \
+  --env XDG_STATE_HOME=/home/vscode/.local/state \
+  --env XDG_CACHE_HOME=/home/vscode/.cache \
+  ghostline-dev bash
+```
+
+The UID/GID build arguments help files created in the mounted checkout remain
+writable by your host account on Linux. Run the build as your normal,
+non-root user (use `sudo` only for Docker commands if your installation
+requires it). From the container shell, run checks with `make check`. To
+connect the host OpenCode TUI, start the container's server as described in
+[Use host OpenCode with the container](#use-host-opencode-with-the-container).
+The port is published on host loopback only, not on a public interface. If
+host port `4096` is already in use, change the mapping to
+`127.0.0.1:4097:4096` and connect the host TUI to port `4097` instead.
+
+To stop, press `Ctrl-C` to stop the server if it is running, then type `exit`
+to remove the container. The named `ghostline-dev-opencode` volume remains for
+the next run. Removing that volume also deletes its container-only OpenCode
+sessions and provider authentication.
 
 To run the development checks in the container terminal:
 

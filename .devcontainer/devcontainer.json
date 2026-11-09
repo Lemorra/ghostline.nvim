@@ -4,20 +4,12 @@
     "dockerfile": "Dockerfile",
     "context": ".."
   },
-  "features": {
-    "ghcr.io/devcontainers/features/rust:1": {
-      "version": "stable"
-    }
-  },
   "remoteUser": "vscode",
   "containerEnv": {
     "XDG_CONFIG_HOME": "/home/vscode/.config",
     "XDG_DATA_HOME": "/home/vscode/.local/share",
     "XDG_STATE_HOME": "/home/vscode/.local/state",
     "XDG_CACHE_HOME": "/home/vscode/.cache"
-  },
-  "remoteEnv": {
-    "PATH": "/home/vscode/.opencode/bin:${containerEnv:PATH}"
   },
   "forwardPorts": [4096],
   "portsAttributes": {
@@ -27,7 +19,6 @@
       "requireLocalPort": true
     }
   },
-  "postCreateCommand": "bash .devcontainer/post-create.sh",
   "customizations": {
     "vscode": {
       "extensions": ["sumneko.lua"]
