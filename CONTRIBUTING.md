@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping develop ghostline.nvim. The project is at an early scaffold
+Thanks for helping develop ghostline.nvim. The project is at an early MVP
 stage, so proposals that establish a clear and maintainable direction are
 welcome. Please avoid presenting unimplemented behavior as available.
 

@@ -1,7 +1,7 @@
 .PHONY: test lint format format-check check
 
 test:
-	nvim --headless --clean -u tests/minimal_init.lua -c "luafile tests/smoke.lua" -c "qa!"
+	nvim --headless --clean -u tests/minimal_init.lua -c "luafile tests/smoke.lua" -c "luafile tests/mvp.lua" -c "qa!"
 
 lint:
 	luacheck lua tests

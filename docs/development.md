@@ -1,8 +1,8 @@
 # Development environment
 
 This guide sets up an isolated environment for developing and testing
-ghostline.nvim. The plugin is an early scaffold; its smoke test currently
-covers only module loading and the `setup` API contract.
+ghostline.nvim. The headless tests cover the public API, suggestion lifecycle,
+and the placeholder backend without network access.
 
 ## Recommended: development container
 
@@ -113,7 +113,7 @@ dependencies at this stage.
 From the repository root:
 
 ```sh
-make test          # Run Neovim headless smoke tests
+make test          # Run Neovim headless tests
 make lint          # Run Luacheck on lua/ and tests/
 make format-check  # Check Lua formatting with StyLua
 make check         # Run formatting, lint, and tests
@@ -125,7 +125,8 @@ To format Lua files after editing:
 make format
 ```
 
-The smoke test is `tests/smoke.lua`; `tests/minimal_init.lua` creates a clean
+The tests are `tests/smoke.lua` (module API) and `tests/mvp.lua` (ghost text
+lifecycle and placeholder backend); `tests/minimal_init.lua` creates a clean
 Neovim runtime with the checkout on `runtimepath`. Tests are run without a user
 configuration or network access. CI runs the same checks against Neovim 0.9 and
 the current stable release.
