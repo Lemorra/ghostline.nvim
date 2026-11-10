@@ -1,0 +1,27 @@
+{
+  "name": "ghostline.nvim development",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "remoteUser": "vscode",
+  "containerEnv": {
+    "XDG_CONFIG_HOME": "/home/vscode/.config",
+    "XDG_DATA_HOME": "/home/vscode/.local/share",
+    "XDG_STATE_HOME": "/home/vscode/.local/state",
+    "XDG_CACHE_HOME": "/home/vscode/.cache"
+  },
+  "forwardPorts": [4096],
+  "portsAttributes": {
+    "4096": {
+      "label": "OpenCode in development container",
+      "onAutoForward": "notify",
+      "requireLocalPort": true
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": ["sumneko.lua"]
+    }
+  }
+}
