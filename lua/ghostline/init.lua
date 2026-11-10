@@ -60,13 +60,17 @@ local function schedule_trigger()
     return
   end
 
-  timer = uv.new_timer()
-  timer:start(config.trigger.debounce_ms, 0, function()
-    stop_timer()
-    if vim.fn.mode():sub(1, 1) ~= "i" then
-      return
-    end
+  local current = uv.new_timer()
+  timer = current
+  current:start(config.trigger.debounce_ms, 0, function()
+    -- libuv callbacks are fast events: no Vim API calls are allowed here.
+    -- Defer all editor interaction to the main loop.
     vim.schedule(function()
+      -- A newer debounce superseded this one.
+      if timer ~= current then
+        return
+      end
+      stop_timer()
       if config.enabled and vim.fn.mode():sub(1, 1) == "i" then
         M.trigger()
       end
@@ -99,19 +103,27 @@ end
 local function setup_keymaps()
   if config.accept_keymap then
     set_insert_keymap(config.accept_keymap, function()
-      if M.accept() then
-        return ""
+      if not suggestion.is_visible() then
+        return config.accept_keymap
       end
-      return config.accept_keymap
+      if suggestion.is_stale() then
+        suggestion.clear()
+        return config.accept_keymap
+      end
+      -- <expr> mappings are textlocked: buffer changes must happen after the
+      -- expression returns, not while it is being evaluated.
+      vim.schedule(M.accept)
+      return ""
     end)
   end
 
   if config.dismiss_keymap then
     set_insert_keymap(config.dismiss_keymap, function()
-      if M.dismiss() then
-        return ""
+      if not suggestion.is_visible() then
+        return config.dismiss_keymap
       end
-      return config.dismiss_keymap
+      vim.schedule(M.dismiss)
+      return ""
     end)
   end
 

@@ -96,6 +96,8 @@ ghostline.is_visible()
 See [docs/development.md](docs/development.md) for environment setup and local
 test instructions, and [CONTRIBUTING.md](CONTRIBUTING.md) for contribution
 guidelines. The project uses `make test`, `make lint`, and `make format-check`.
+The test suite includes headless regression tests for insert-mode timer and
+keymap integration.
 
 The repository also includes an optional, project-local OpenCode developer
 agent. See [docs/development.md](docs/development.md#opencode-assisted-development)

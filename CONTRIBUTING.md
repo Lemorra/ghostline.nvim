@@ -21,6 +21,9 @@ Individual checks are available as `make test`, `make lint`, and
 
 - Keep changes focused and explain the user-facing motivation.
 - Add or update tests and documentation when behavior changes.
+- Tests that need insert mode should follow the deferred-stage pattern in
+  `tests/regressions.lua`; see
+  [docs/development.md](docs/development.md#editor-loop-integration).
 - Run `make check` before opening a pull request.
 - Do not commit credentials, tokens, or generated artifacts.
 
