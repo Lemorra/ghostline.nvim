@@ -107,9 +107,11 @@ network:
 ## Usage
 
 In insert mode, type and pause (in `auto`/`both` mode) or press the trigger key
-(in `manual`/`both` mode). Ghost text appears after the cursor. Press `<Tab>` to
-insert it into the buffer, or `<C-]>` to dismiss it. Leaving insert mode also
-clears the suggestion.
+(in `manual`/`both` mode). Ghost text appears after the cursor. For a multi-line
+suggestion, the first line appears after the cursor and the remaining lines
+appear below the current line. Press `<Tab>` to insert the full suggestion into
+the buffer, or `<C-]>` to dismiss it. Leaving insert mode also clears the
+suggestion.
 
 The same actions are available programmatically:
 

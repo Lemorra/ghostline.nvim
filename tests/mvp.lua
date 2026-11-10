@@ -17,9 +17,10 @@ local function first_line(buf)
 end
 
 local captured
+local next_response = "Waiting for model response"
 ollama._set_transport(function(payload, callback)
   captured = payload
-  callback("Waiting for model response")
+  callback(next_response)
 end)
 
 ghostline.setup({
@@ -60,6 +61,26 @@ assert(
   cursor[1] == 1 and cursor[2] == #"local x = Waiting for model response",
   "cursor should follow accepted text"
 )
+
+next_response = "first line\nsecond line"
+buf = new_buffer({ "def f():" }, 8)
+assert(ghostline.trigger(), "trigger should start a multiline suggestion request")
+assert(ghostline.is_visible(), "multiline ghost text should be visible")
+assert(first_line(buf) == "def f():", "multiline ghost text should not modify the buffer")
+local namespace = vim.api.nvim_create_namespace("ghostline")
+local marks = vim.api.nvim_buf_get_extmarks(buf, namespace, 0, -1, { details = true })
+assert(#marks == 1, "multiline suggestion should create one extmark")
+local details = marks[1][4]
+assert(details.virt_text[1][1] == "first line", "the first line should render after the cursor")
+assert(
+  details.virt_lines and details.virt_lines[1][1][1] == "second line",
+  "remaining lines should render below the current line"
+)
+assert(ghostline.accept(), "accept should insert the multiline suggestion")
+local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+assert(lines[1] == "def f():first line", "accept should insert the first line at the cursor")
+assert(lines[2] == "second line", "accept should insert the remaining lines below")
+next_response = "Waiting for model response"
 
 buf = new_buffer({ "before", "local x = ", "after" }, 10)
 vim.api.nvim_win_set_cursor(0, { 2, 10 })

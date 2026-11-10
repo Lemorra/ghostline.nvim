@@ -191,6 +191,9 @@ previously broken, and `tests/regressions.lua` guards against regressions:
   call `nvim_buf_set_text` while the expression is evaluated; schedule the
   accept instead and return `""` to consume the key. A synchronous change
   fails with "Failed to save undo information" (or E523 on newer versions).
+- A `virt_text` chunk cannot contain newlines; Neovim renders them as `^@`.
+  `suggestion.lua` puts the first line in `virt_text` and uses `virt_lines` for
+  the remaining lines.
 
 `tests/regressions.lua` needs a real insert-mode session. Since `startinsert`
 only takes effect after the sourcing command returns, the test runs its stages

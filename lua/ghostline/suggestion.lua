@@ -62,11 +62,21 @@ function M.show(buf, row, col, text, highlight)
     return false
   end
 
+  -- Virtual text cannot contain newlines; Neovim renders them as `^@`.
+  -- Show the first line after the cursor and the remaining lines below it.
+  local lines = vim.split(text, "\n", { plain = true })
   local opts = {
-    virt_text = { { text, highlight } },
+    virt_text = { { lines[1], highlight } },
     virt_text_pos = "inline",
     hl_mode = "combine",
   }
+  if #lines > 1 then
+    local virt_lines = {}
+    for i = 2, #lines do
+      virt_lines[#virt_lines + 1] = { { lines[i], highlight } }
+    end
+    opts.virt_lines = virt_lines
+  end
 
   local ok, extmark = pcall(vim.api.nvim_buf_set_extmark, buf, namespace, row, col, opts)
   if not ok then
