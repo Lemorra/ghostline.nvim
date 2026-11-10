@@ -1,8 +1,8 @@
 # Development environment
 
 This guide sets up an isolated environment for developing and testing
-ghostline.nvim. The plugin is an early scaffold; its smoke test currently
-covers only module loading and the `setup` API contract.
+ghostline.nvim. The headless tests cover the public API, suggestion lifecycle,
+and the placeholder backend without network access.
 
 ## Recommended: development container
 
@@ -113,7 +113,7 @@ dependencies at this stage.
 From the repository root:
 
 ```sh
-make test          # Run Neovim headless smoke tests
+make test          # Run Neovim headless tests
 make lint          # Run Luacheck on lua/ and tests/
 make format-check  # Check Lua formatting with StyLua
 make check         # Run formatting, lint, and tests
@@ -125,10 +125,12 @@ To format Lua files after editing:
 make format
 ```
 
-The smoke test is `tests/smoke.lua`; `tests/minimal_init.lua` creates a clean
-Neovim runtime with the checkout on `runtimepath`. Tests are run without a user
-configuration or network access. CI runs the same checks against Neovim 0.9 and
-the current stable release.
+The tests are `tests/smoke.lua` (module API), `tests/mvp.lua` (ghost text
+lifecycle and placeholder backend), and `tests/regressions.lua` (editor-loop
+integration); `tests/minimal_init.lua` creates a clean Neovim runtime with the
+checkout on `runtimepath`. Tests are run without a user configuration or
+network access. CI runs the same checks against Neovim 0.9 and the current
+stable release.
 
 ## Developing the plugin
 
@@ -136,6 +138,26 @@ The public module currently lives in `lua/ghostline/init.lua`. Keep user-facing
 setup and configuration behavior documented in `README.md` and add tests in
 `tests/` as functionality is introduced. Avoid adding provider credentials or
 tokens to the repository; tests should not depend on live completion services.
+
+### Editor-loop integration
+
+Two Neovim constraints shape the trigger and insert-mode keymaps. Both were
+previously broken, and `tests/regressions.lua` guards against regressions:
+
+- libuv callbacks, such as `timer:start` callbacks used for the automatic
+  debounce, run as fast events. Perform editor work from `vim.schedule`;
+  calling `vim.fn.*` or other Vim API functions from the callback raises
+  E5560 and aborts the trigger before a suggestion is shown.
+- Insert-mode `<expr>` mappings are textlocked. Do not change buffer text or
+  call `nvim_buf_set_text` while the expression is evaluated; schedule the
+  accept instead and return `""` to consume the key. A synchronous change
+  fails with "Failed to save undo information" (or E523 on newer versions).
+
+`tests/regressions.lua` needs a real insert-mode session. Since `startinsert`
+only takes effect after the sourcing command returns, the test runs its stages
+from deferred callbacks and quits itself. `make test` therefore starts it as a
+separate Neovim invocation without a trailing `qa!`. Keep new stages
+asynchronous and exit non-zero on failure so CI does not hang.
 
 ## OpenCode-assisted development
 
