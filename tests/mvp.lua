@@ -16,22 +16,39 @@ local function first_line(buf)
   return vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1]
 end
 
-local response
-ollama.complete({}, function(text)
-  response = text
+local captured
+ollama._set_transport(function(payload, callback)
+  captured = payload
+  callback("Waiting for model response")
 end)
-assert(
-  response == "Waiting for model response",
-  "the placeholder backend should return fixed ghost text"
-)
 
-ghostline.setup({ trigger = { mode = "manual" } })
+ghostline.setup({
+  trigger = { mode = "manual" },
+  ollama = {
+    model = "test-model",
+    context_lines = 5,
+    options = { num_predict = 16 },
+  },
+})
+
+local payload = ollama.build_payload({ prefix = "local x = ", suffix = "\nend" })
+assert(payload.model == "test-model", "build_payload should use the configured model")
+assert(payload.prompt == "local x = ", "build_payload should send the prefix as prompt")
+assert(payload.suffix == "\nend", "build_payload should send the suffix for FIM")
+assert(payload.stream == false, "build_payload should request a non-streaming response")
+assert(payload.options.num_predict == 16, "build_payload should forward options")
+assert(payload.options.temperature == 0.1, "default options should be preserved")
+
+assert(not pcall(ollama.setup, { port = 0 }), "invalid ports should be rejected")
+assert(not pcall(ollama.setup, { model = "" }), "empty models should be rejected")
+assert(not pcall(ollama.setup, { timeout_ms = 0 }), "non-positive timeouts should be rejected")
 
 local buf = new_buffer({ "local x = " }, 10)
-assert(not ghostline.is_visible(), "no suggestion should be visible initially")
-assert(ghostline.trigger(), "trigger should display a suggestion")
+assert(ghostline.trigger(), "trigger should start a suggestion request")
 assert(ghostline.is_visible(), "trigger should make ghost text visible")
 assert(first_line(buf) == "local x = ", "ghost text should not modify the buffer before accepting")
+assert(captured.prompt == "local x = ", "trigger should send the text before the cursor")
+assert(captured.suffix == "", "trigger should send the text after the cursor")
 assert(ghostline.accept(), "accept should insert the visible suggestion")
 assert(
   first_line(buf) == "local x = Waiting for model response",
@@ -44,14 +61,17 @@ assert(
   "cursor should follow accepted text"
 )
 
-buf = new_buffer({ "return " }, 7)
-assert(ghostline.trigger(), "trigger should display a suggestion")
+buf = new_buffer({ "before", "local x = ", "after" }, 10)
+vim.api.nvim_win_set_cursor(0, { 2, 10 })
+assert(ghostline.trigger(), "trigger should start a suggestion request")
+assert(captured.prompt == "before\nlocal x = ", "trigger should include preceding context")
+assert(captured.suffix == "\nafter", "trigger should include following context")
 assert(ghostline.dismiss(), "dismiss should clear a visible suggestion")
 assert(not ghostline.is_visible(), "dismiss should hide the ghost text")
-assert(first_line(buf) == "return ", "dismiss should leave the buffer unchanged")
+assert(first_line(buf) == "before", "dismiss should leave the buffer unchanged")
 
 buf = new_buffer({ "abc" }, 3)
-assert(ghostline.trigger(), "trigger should display a suggestion")
+assert(ghostline.trigger(), "trigger should start a suggestion request")
 vim.api.nvim_win_set_cursor(0, { 1, 1 })
 assert(not ghostline.accept(), "accept should reject a stale suggestion")
 assert(first_line(buf) == "abc", "a stale suggestion should not modify the buffer")

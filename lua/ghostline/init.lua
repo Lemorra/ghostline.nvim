@@ -22,6 +22,7 @@ local defaults = {
   accept_keymap = "<Tab>",
   dismiss_keymap = "<C-]>",
   highlight = "GhostlineText",
+  ollama = ollama.defaults,
 }
 
 local config = vim.deepcopy(defaults)
@@ -184,6 +185,7 @@ function M.setup(opts)
   clear_keymaps()
 
   vim.api.nvim_set_hl(0, config.highlight, { default = true, link = "Comment" })
+  ollama.setup(config.ollama)
 
   local group = vim.api.nvim_create_augroup("Ghostline", { clear = true })
   if not config.enabled then
@@ -194,8 +196,38 @@ function M.setup(opts)
   setup_autocmds(group)
 end
 
+---Collect the text before and after the cursor for fill-in-the-middle mode.
+---@param buf integer
+---@param row integer Zero-based row.
+---@param col integer Zero-based byte column.
+---@return string prefix
+---@return string suffix
+local function build_context(buf, row, col)
+  local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+  local line_nr = row + 1
+  local current = lines[line_nr] or ""
+  col = math.min(col, #current)
+
+  local context_lines = config.ollama.context_lines
+  local first = math.max(1, line_nr - context_lines)
+  local last = math.min(#lines, line_nr + context_lines)
+
+  local prefix = {}
+  for i = first, line_nr - 1 do
+    prefix[#prefix + 1] = lines[i]
+  end
+  prefix[#prefix + 1] = current:sub(1, col)
+
+  local suffix = { current:sub(col + 1) }
+  for i = line_nr + 1, last do
+    suffix[#suffix + 1] = lines[i]
+  end
+
+  return table.concat(prefix, "\n"), table.concat(suffix, "\n")
+end
+
 ---Request a suggestion at the cursor and render it as ghost text.
----@return boolean True when ghost text was displayed.
+---@return boolean True when a completion request was started.
 function M.trigger()
   if not config.enabled then
     return false
@@ -236,15 +268,14 @@ function M.trigger()
     suggestion.show(buf, row, col, text, config.highlight)
   end
 
+  local prefix, suffix = build_context(buf, row, col)
   ollama.complete({
-    buf = buf,
-    row = row,
-    col = col,
-    line = vim.api.nvim_get_current_line(),
+    prefix = prefix,
+    suffix = suffix,
     filetype = vim.bo[buf].filetype,
   }, show)
 
-  return suggestion.is_visible()
+  return true
 end
 
 ---Accept the visible suggestion by inserting it at the cursor.

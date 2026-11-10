@@ -13,8 +13,15 @@
 -- the final stage quits.
 
 local ghostline = require("ghostline")
+local ollama = require("ghostline.ollama")
 
 local PLACEHOLDER = "Waiting for model response"
+
+-- The regression tests exercise the editor loop, not the network. Resolve
+-- completion requests synchronously with fixed text.
+ollama._set_transport(function(_, callback)
+  callback(PLACEHOLDER)
+end)
 
 local function finish(message, code)
   if message then
