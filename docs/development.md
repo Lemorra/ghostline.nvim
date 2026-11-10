@@ -2,7 +2,7 @@
 
 This guide sets up an isolated environment for developing and testing
 ghostline.nvim. The headless tests cover the public API, suggestion lifecycle,
-and the placeholder backend without network access.
+and the Ollama backend configuration without network access.
 
 ## Recommended: development container
 
@@ -126,11 +126,11 @@ make format
 ```
 
 The tests are `tests/smoke.lua` (module API), `tests/mvp.lua` (ghost text
-lifecycle and placeholder backend), and `tests/regressions.lua` (editor-loop
-integration); `tests/minimal_init.lua` creates a clean Neovim runtime with the
-checkout on `runtimepath`. Tests are run without a user configuration or
-network access. CI runs the same checks against Neovim 0.9 and the current
-stable release.
+lifecycle, backend configuration, and request payload), and
+`tests/regressions.lua` (editor-loop integration); `tests/minimal_init.lua`
+creates a clean Neovim runtime with the checkout on `runtimepath`. Tests are run
+without a user configuration or network access. CI runs the same checks against
+Neovim 0.9 and the current stable release.
 
 ## Developing the plugin
 
@@ -138,6 +138,45 @@ The public module currently lives in `lua/ghostline/init.lua`. Keep user-facing
 setup and configuration behavior documented in `README.md` and add tests in
 `tests/` as functionality is introduced. Avoid adding provider credentials or
 tokens to the repository; tests should not depend on live completion services.
+
+### Ollama backend
+
+`lua/ghostline/ollama.lua` sends non-streaming requests to Ollama's
+`POST /api/generate` endpoint. `init.lua` collects the text before and after the
+cursor; `ollama.lua` sends it as `prompt` and `suffix` so Ollama can apply the
+model's fill-in-the-middle template. The HTTP client uses libuv's TCP support
+and `vim.json`, so the plugin has no third-party runtime dependencies. It
+supports plain HTTP only.
+
+Ollama enables `suffix` only when the model template contains `{{ .Suffix }}`.
+An imported GGUF may have only `TEMPLATE {{ .Prompt }}` or an instruct template,
+which makes Ollama reject completions with `... does not support insert`. Create
+a FIM-capable model from the base checkpoint, using the FIM tokens from that
+model's tokenizer. For DeepSeek Coder base that is:
+
+```dockerfile
+FROM hf.co/TheBloke/deepseek-coder-6.7B-base-GGUF:Q4_K_M
+TEMPLATE """<｜begin▁of▁sentence｜><｜fim▁begin｜>{{ .Prompt }}<｜fim▁hole｜>{{ .Suffix }}<｜fim▁end｜>"""
+```
+
+```sh
+ollama create deepseek-coder-fim -f Modelfile
+```
+
+Use the exact full-width tokens from the model tokenizer. Ollama stores the
+template verbatim, so ASCII spellings such as `<|fim_begin|>` are tokenized as
+ordinary text and produce garbage. Include the model's BOS token at the start;
+Ollama does not add it automatically for imported GGUF models. After creating
+the model, `ollama show --modelfile deepseek-coder-fim` should display the
+full-width characters.
+
+Then set `ollama.model = "deepseek-coder-fim"`. Instruct variants are generally
+not FIM-tuned and will not work even if `{{ .Suffix }}` is present.
+
+Tests use `ollama._set_transport` to replace the HTTP transport with a
+synchronous fake. Keep new tests offline: assert on `ollama.build_payload` and
+the captured payload rather than contacting a server. Configuration validation
+lives in `ollama.setup` and runs from `ghostline.setup`.
 
 ### Editor-loop integration
 
@@ -152,6 +191,9 @@ previously broken, and `tests/regressions.lua` guards against regressions:
   call `nvim_buf_set_text` while the expression is evaluated; schedule the
   accept instead and return `""` to consume the key. A synchronous change
   fails with "Failed to save undo information" (or E523 on newer versions).
+- A `virt_text` chunk cannot contain newlines; Neovim renders them as `^@`.
+  `suggestion.lua` puts the first line in `virt_text` and uses `virt_lines` for
+  the remaining lines.
 
 `tests/regressions.lua` needs a real insert-mode session. Since `startinsert`
 only takes effect after the sourcing command returns, the test runs its stages
